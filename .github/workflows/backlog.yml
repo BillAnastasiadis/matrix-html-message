@@ -1,0 +1,29 @@
+---
+name: Check SUSE QA Tools WIP-Limit and set due dates
+# yamllint disable-line rule:truthy
+on: [push, pull_request]
+jobs:
+  check_suse_qe_tools_wip_limit:
+    name: Check SUSE QE Tools WIP-Limit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install curl jq
+      - name: Check SUSE QE Tools WIP-Limit
+        id: wip-limit
+        run: exit 3
+      - name: Check step status
+        id: step_check
+        if: always()
+        continue-on-error: true
+        run: |
+          . steps.sh ${{github.job}} ${{github.repository}} ${{github.run_id}}
+        env:
+          step_context: ${{ toJson(steps) }}
+      - name: send message
+        if: (success() || failure()) && steps.step_check.outcome == 'failure'
+        continue-on-error: true
+        run: |
+          . chat_notify.sh "matrix.org" "${{steps.step_check.outputs.result}}" \
+            "${{secrets.MATRIX_ACCESS_TOKEN}}" "${{secrets.MATRIX_ROOM_ID}}"
